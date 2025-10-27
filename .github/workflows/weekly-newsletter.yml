@@ -23,9 +23,9 @@ jobs:
           pip install -r requirements.txt
       
       - name: Run newsletter generator
-        run: python main.py
+        run: python main_with_claude.py
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       
       - name: Upload newsletter artifacts
         uses: actions/upload-artifact@v3
@@ -34,11 +34,11 @@ jobs:
           path: output/
           retention-days: 30
       
-      - name: Commit and push (optional)
+      - name: Commit and push
         if: github.ref == 'refs/heads/main'
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add output/
-          git commit -m "�� Weekly newsletter - ${{ github.run_number }}" || exit 0
+          git commit -m "📰 Weekly newsletter - $(date +'%Y-%m-%d')" || exit 0
           git push || exit 0
