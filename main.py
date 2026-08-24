@@ -11,7 +11,7 @@ dotenv.load_dotenv()
 
 # Import our modules
 import config
-from scrapers import HackerNewsScraper, RSSScraper, ContentFilter
+from scrapers import HackerNewsScraper, RSSScraper, ContentFilter, fill_missing_summaries
 from newsletter_generator import NewsletterGenerator
 
 
@@ -27,7 +27,7 @@ def main():
     if config.SOURCES["hacker_news"]["enabled"]:
         print("🔍 Scraping Hacker News...")
         hn_scraper = HackerNewsScraper()
-        hn_items = hn_scraper.get_trending()
+        hn_items = hn_scraper.get_trending() + hn_scraper.search()
         all_items.extend(hn_items)
         print(f"   Found {len(hn_items)} items\n")
     
@@ -51,6 +51,9 @@ def main():
     filtered_items = content_filter.rank_and_filter(all_items)
     
     print(f"✅ Selected {len(filtered_items)} items for newsletter\n")
+
+    print("📝 Fetching summaries for items without one...")
+    fill_missing_summaries(filtered_items)
     
     # Cluster by theme (optional)
     print("�� Clustering by theme...")

@@ -5,26 +5,43 @@ import feedparser
 from datetime import datetime, timedelta
 from typing import List, Dict
 import requests
+from bs4 import BeautifulSoup
 import config
+from .keywords import matched_keywords
 
 
 class RSSScraper:
     """Scrape RSS feeds from various sources"""
     
+    USER_AGENT = "FoundingEngineersNewsletter/1.0 (+https://github.com/bfutor/founding-engineers-newsletter)"
+
     def __init__(self):
         self.cutoff_date = datetime.now() - timedelta(days=config.DAYS_TO_COLLECT)
-        
+
+    def _fetch(self, feed_url: str):
+        """Fetch a feed with a real User-Agent and parse it"""
+        response = requests.get(feed_url, timeout=15, headers={"User-Agent": self.USER_AGENT})
+        response.raise_for_status()
+        return feedparser.parse(response.content)
+
+    @staticmethod
+    def _plain_text(html: str) -> str:
+        """Strip markup and collapse whitespace in feed content"""
+        if not html:
+            return ""
+        return ' '.join(BeautifulSoup(html, "html.parser").get_text(" ").split())
+
     def parse_feed(self, feed_url: str, source_name: str = None) -> List[Dict]:
         """Parse an RSS feed and return relevant items"""
         results = []
         
         try:
-            feed = feedparser.parse(feed_url)
-            
-            if feed.bozo and feed.bozo_exception:
-                print(f"RSS parsing error for {feed_url}: {feed.bozo_exception}")
+            feed = self._fetch(feed_url)
+
+            if not feed.entries:
+                print(f"RSS parsing error for {feed_url}: {getattr(feed, 'bozo_exception', 'no entries')}")
                 return results
-                
+
             for entry in feed.entries:
                 # Parse date
                 pub_date = datetime(*entry.published_parsed[:6]) if hasattr(entry, 'published_parsed') else self.cutoff_date
@@ -33,29 +50,26 @@ class RSSScraper:
                     continue
                 
                 # Combine title and content for keyword matching
-                content_text = ""
+                parts = []
                 if hasattr(entry, 'summary'):
-                    content_text = entry.summary
-                elif hasattr(entry, 'content'):
-                    content_text = ' '.join([c.value for c in entry.content])
+                    parts.append(entry.summary)
+                if hasattr(entry, 'content'):
+                    parts.extend(c.value for c in entry.content)
+                content_text = ' '.join(parts)
                 
                 full_text = f"{entry.title} {content_text}".lower()
                 
-                # Check if keywords match
-                matched_keywords = []
-                for keyword in config.KEYWORDS:
-                    if keyword.lower() in full_text:
-                        matched_keywords.append(keyword)
-                
-                if matched_keywords:
+                matched = matched_keywords(full_text)
+
+                if matched:
                     item = {
                         "title": entry.title,
                         "url": entry.link,
                         "author": entry.get("author", ""),
                         "published": pub_date,
                         "source": source_name or feed_url,
-                        "keywords_matched": matched_keywords,
-                        "summary": entry.get("summary", "")
+                        "keywords_matched": matched,
+                        "summary": self._plain_text(getattr(entry, 'summary', '') or content_text)
                     }
                     results.append(item)
                     
