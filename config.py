@@ -30,7 +30,8 @@ SOURCES = {
     "hacker_news": {
         "enabled": True,
         "url": "https://news.ycombinator.com",
-        "api_url": "https://hn.algolia.com/api/v1/search_by_date"
+        "api_url": "https://hn.algolia.com/api/v1/search_by_date",
+        "search_url": "https://hn.algolia.com/api/v1/search"
     },
     "techcrunch": {
         "enabled": True,
@@ -39,7 +40,7 @@ SOURCES = {
     "substack": {
         "enabled": True,
         "sources": [
-            "https://lethain.com/rss/",
+            "https://lethain.com/feeds.xml",
             "https://blog.pragmaticengineer.com/feed"
         ]
     },

@@ -11,7 +11,7 @@ dotenv.load_dotenv()
 
 # Import our modules
 import config
-from scrapers import HackerNewsScraper, RSSScraper, ContentFilter
+from scrapers import HackerNewsScraper, RSSScraper, ContentFilter, fill_missing_summaries
 from scrapers.claude_summarizer import ClaudeSummarizer
 from newsletter_generator import NewsletterGenerator
 
@@ -28,7 +28,7 @@ def main():
     if config.SOURCES["hacker_news"]["enabled"]:
         print("🔍 Scraping Hacker News...")
         hn_scraper = HackerNewsScraper()
-        hn_items = hn_scraper.get_trending()
+        hn_items = hn_scraper.get_trending() + hn_scraper.search()
         all_items.extend(hn_items)
         print(f"   Found {len(hn_items)} items\n")
     
@@ -61,6 +61,8 @@ def main():
         claude.enhance_item(item)
     
     print(f"✅ Enhanced summaries generated\n")
+
+    fill_missing_summaries(filtered_items)
     
     # Cluster by theme
     print("📑 Clustering by theme...")
